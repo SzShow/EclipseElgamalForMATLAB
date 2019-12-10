@@ -48,6 +48,9 @@ classdef ElipticCurve < handle
             p = obj.p;
         end
         
+        function p = GetPrime(obj)
+            p = obj.p;
+        end
     end
     
     methods (Access = protected)
@@ -92,9 +95,18 @@ classdef ElipticCurve < handle
             end
         end
         
-        function [a, b] = SetCurveParams(~, j, p)
-            a = mod(sym(3*j)/sym(1728-j), sym(p));
-            b = mod(sym(2*j)/sym(1728-j), sym(p));
+        function [a, b] = SetCurveParams(~, j, p, N)
+            cRange = [1 N-1];
+            c = randi(cRange);
+                        
+            a = mod((sym(3*j)*(c^2))/sym(1728-j), sym(p));
+            b = mod((sym(2*j)*(c^3))/sym(1728-j), sym(p));
+            
+            x0 = sym(randi(cRange));
+            
+            tau=(x0^3) + (a*x0) + b;
+            
+            
         end
     end
     
