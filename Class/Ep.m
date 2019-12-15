@@ -1,9 +1,16 @@
 classdef Ep
-    %EP このクラスの概要をここに記述
-    %   詳細説明をここに記述
     
     properties (Access = protected, Constant)
         INFINITE_POINT = -9999;
+    end
+    
+    properties (SetAccess = protected)
+        x
+        y 
+        
+        elipticCurve
+        
+        isInfinitePoint
     end
     
     methods (Access = public)
@@ -12,9 +19,10 @@ classdef Ep
         % xのみ座標が記入された場合は楕円曲線のパラメータに基づいて
         % 求められる座標yの内、正の値を返します。
         function obj = Ep(E, x, y)
+            obj.elipticCurve = E;
+            
             if nargin == 1
-                obj.elipticCurve = E;
-                
+                      
                 % いるんか？？？って感じですが、お気持ち的に
                 % なんか入れないと気持ち悪いので・・・
                 obj.x = obj.INFINITE_POINT;
@@ -22,23 +30,29 @@ classdef Ep
 
                 obj.isInfinitePoint = true;
             elseif nargin == 2
-                obj.elipticCurve = E;
                 obj.x = mod(sym(x), E.p);
-                obj.y = mod(sqrt((sym(x)^3)+(E.a*x)+E.b), E.p);
+                obj.y = E.CalculateY2(obj.x);
+                
+                if ~isSymType(obj.y, 'rational') && ...
+                    ~isSymType(obj.y, 'integer')
+                    error("xは楕円曲線上の有理点を持ちません")
+                end
+                
+                obj.isInfinitePoint = false;
                 
             elseif nargin == 3
-                obj.elipticCurve = E;
-                obj.x = x;
-                obj.y = y;
+                
+                if mod(sym(y)^2, E.p) ~= E.CalculateY2(x)
+                    error("入力された座標は楕円曲線上の点ではありません");
+                    
+                end
+                    
+                obj.x = sym(x);
+                obj.y = sym(y);
 
                 obj.isInfinitePoint = false;
             end
 
-        end
-        
-        function [x, y]=GetPoint(obj)
-            x=obj.x;
-            y=obj.y;
         end
         
         function n = GetOrder(obj)
@@ -58,25 +72,34 @@ classdef Ep
                 return;
             end
             
-            [x1, y1] = P.GetPoint();
-            [x2, y2] = Q.GetPoint();
+            a = P.elipticCurve.a;
+            b = P.elipticCurve.b;
+            p = P.elipticCurve.p;
             
             % 1. 逆元のチェック
             % 2. 同点のチェック
-            if y1==-y2
+            if P.y==-Q.y
                 R = Ep(P.elipticCurve);
                 return;
-            elseif x1==x2 && ...
-                y1==y2
-                a = P.elipticCurve.GetParams();
-                grad = (3*(x1^2)+a)/(2*y1);
+            elseif P.x==Q.x && ...
+                P.y==Q.y
+%                 grad_num = 3*(P.x^2)+a;
+%                 grad_dem = mod(2*P.y, p);
+%             else
+%                 grad_num = Q.y-P.y;
+%                 grad_dem = mod(Q.x-P.x, p);
+%             end
+%             x3 = mod(grad_num^2-(P.x*(grad_dem^2))-(Q.x*(grad_dem^2)), p);
+%             y3 = mod((grad_num*(P.x-x3))-(P.y*grad_dem), p);
+%             R = Ep(P.elipticCurve, x3/(grad_dem^2), y3/grad_dem);
+                grad = (3*(P.x^2)+a)/(2*P.y);
             else
-                grad = (y2-y1)/(x2-x1);
+                grad = (Q.y-P.y)/(Q.x-P.x);
             end
             
-            x3 = grad^2-x1-x2;
-            y3 = grad*(x1-x3)-y1;
-            
+            x3 = mod(grad^2-P.x-Q.x, p);
+            y3 = mod(grad*(P.x-x3)-P.y, p);
+                      
             R = Ep(P.elipticCurve, x3, y3);
         end
         
@@ -85,11 +108,8 @@ classdef Ep
     end
     
     properties (Access = protected)
-        elipticCurve
-        x
-        y
-        
-        isInfinitePoint
+     
+
     end
 end
 
